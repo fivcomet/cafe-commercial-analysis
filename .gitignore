@@ -1,0 +1,5 @@
+.venv/
+data/
+references/README.md
+.ipynb_checkpoints/
+__pycache__/
