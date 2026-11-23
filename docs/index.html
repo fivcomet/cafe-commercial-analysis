@@ -135,10 +135,10 @@ document.getElementById("nGood").textContent = D.rows.filter(r=>r.g==="양호").
   const o = document.createElement("option"); o.value = g; o.textContent = g; document.getElementById("gu").appendChild(o);
 });
 
-const map = L.map("map", {preferCanvas:true}).setView([37.56, 126.99], 11);
+const map = L.map("map", {preferCanvas:true, maxZoom:18}).setView([37.56, 126.99], 11);
 const esri = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-  attribution: "Tiles &copy; Esri", maxZoom: 16}).addTo(map);
-const esriLabel = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {maxZoom: 16, pane: "shadowPane"}).addTo(map);
+  attribution: "Tiles &copy; Esri", maxNativeZoom: 15, maxZoom: 18}).addTo(map);
+const esriLabel = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {maxNativeZoom: 15, maxZoom: 18, pane: "shadowPane"}).addTo(map);
 let tileErr = 0;
 esri.on("tileerror", () => { if(++tileErr === 8){ map.removeLayer(esri); map.removeLayer(esriLabel);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution: "&copy; OpenStreetMap", maxZoom: 18, opacity: 0.6}).addTo(map); } });
