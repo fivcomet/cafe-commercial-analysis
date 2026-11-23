@@ -33,6 +33,9 @@
   .item:hover{background:#faf9f7}
   .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
   .basetiles{filter:grayscale(1) brightness(1.08) contrast(.85);opacity:.75}
+  .tip{position:relative;display:inline-block;margin-left:2px;color:var(--sub);cursor:help}
+  .tip .tipbox{display:none;position:absolute;right:0;top:130%;width:260px;padding:10px 12px;background:#1f2328;color:#fff;font-weight:400;font-size:12.5px;line-height:1.5;border-radius:8px;text-align:left;white-space:normal;z-index:1000;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+  .tip:hover .tipbox{display:block}
   #map{height:640px;border-radius:12px;border:1px solid var(--line)}
   .legend{display:flex;gap:14px;font-size:13px;color:var(--sub);margin-top:8px}
   .badge{display:inline-block;padding:3px 10px;border-radius:999px;color:#fff;font-weight:600;font-size:14px}
@@ -102,7 +105,7 @@
 <section class="tbl">
   <table>
     <thead><tr>
-      <th data-k="n">상권</th><th data-k="gu">자치구</th><th data-k="t">유형</th><th data-k="g">등급</th><th class="num" data-k="p" title="모델 확률을 0~100으로 바꾼 값. 순서를 비교하는 용도">전망 점수 ⓘ</th>
+      <th data-k="n">상권</th><th data-k="gu">자치구</th><th data-k="t">유형</th><th data-k="g">등급</th><th class="num" data-k="p">전망 점수 <span class="tip" onclick="event.stopPropagation()">ⓘ<span class="tipbox">모델이 매긴 점수(1~99)예요. 높을수록 2026년에 다른 상권보다 잘 버틸 쪽이에요. 40 미만은 위험, 60 이상은 양호예요. 점수 하나하나의 차이보다 순서와 등급을 보세요.</span></span></th>
       <th class="num" data-k="q4">2025 4분기 변화</th><th class="num" data-k="yr">2025 1년 변화</th><th class="num" data-k="cl">폐업률</th><th class="num" data-k="cafe">카페 수</th>
     </tr></thead>
     <tbody id="tb"></tbody>
@@ -114,7 +117,8 @@
     <li>등급은 <b>같은 해 다른 상권과 비교한 상대적인 전망</b>입니다. '양호'라도 매출이 줄 수 있습니다.</li>
     <li>상권 전체의 흐름이며, 그 상권에 새로 차릴 가게의 성공이나 수익을 말하지 않습니다. 임대료·위치·운영 정보는 없습니다.</li>
     <li>성능: 2025년 시험 ROC-AUC 0.667, 2026년 상반기 확인 ROC-AUC 0.706. 약하지만 분명한 신호이므로 후보 상권을 거르는 1차 참고용입니다. 가장 큰 신호는 '연말까지 이어진 최근 매출 흐름'입니다.</li>
-    <li>전망 점수(0~100)는 모델 확률을 바꾼 값으로, <b>상권끼리 순서를 비교하는 용도</b>입니다. 양 끝에서는 실제보다 자신 있게 나오는 경향이 있어 '몇 % 확률'로 읽지 않는 것을 권합니다. 40 미만은 위험, 60 이상은 양호입니다.</li>
+    <li>전망 점수(1~99)는 모델이 매긴 점수로, 높을수록 잘 버틸 쪽입니다. 40 미만은 위험, 60 이상은 양호입니다. <b>'몇 % 확률'로 읽지 마세요.</b> 점수가 아주 높거나 낮은 쪽에서는 모델이 실제보다 자신 있게 매기는 경향이 있어(예: 80점대 상권의 실제 잘버팀은 약 73%) 1~99로 잘라 표시합니다.</li>
+    <li>4분기 변화가 수백 %인 상권은 대부분 카페가 5~10곳인 작은 상권이라, 몇 곳의 변화로도 숫자가 크게 움직입니다.</li>
     <li>카페 5곳 이상이고 매출 추정이 있는 상권만 진단합니다(862곳).</li>
     <li>데이터 출처: 서울열린데이터광장 「서울시 상권분석서비스」(서울특별시). 추정매출은 카드 결제 기반 추정치입니다.</li>
   </ul>
@@ -127,6 +131,9 @@ const DESC = {"양호":"2025년 시험에서 이 등급 상권의 73%, 2026년 �
               "위험":"2025년 시험에서 이 등급 상권의 24%, 2026년 상반기에는 19%만 잘 버텼어요."};
 const REASON = [["r1","최근 매출 흐름"],["r2","작년 폐업(경쟁 정리)"],["r3","카페 증가 vs 유동인구"],["r4","상권 유형"],["r5","분기별 출렁임"]];
 const byCode = {}; D.rows.forEach(r => byCode[r.c] = r);
+[...D.rows].sort((a,b) => b.p - a.p).forEach((r,i) => { r.top = Math.max(1, Math.ceil((i+1)/D.rows.length*100)); });
+const topTxt = r => `상위 ${r.top}%`;
+const score = r => Math.min(99, Math.max(1, Math.round(r.p*100)));   // 1~99로 표시 (양 끝은 과하게 확신하는 경향)
 const pct = (v, d=1) => (v>0?"+":"") + (v*100).toFixed(d) + "%";
 const state = {q:"", gu:"", g:new Set(["위험","보통","양호"]), sel:null, sortK:"g", sortDir:1};
 const GORDER = {"위험":0,"보통":1,"양호":2};
@@ -139,8 +146,15 @@ document.getElementById("nGood").textContent = D.rows.filter(r=>r.g==="양호").
 });
 
 const map = L.map("map", {preferCanvas:true, maxZoom:19}).setView([37.56, 126.99], 11);
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap contributors", maxZoom: 19, className: "basetiles"}).addTo(map);
+// 웹(GitHub Pages)에서는 OpenStreetMap, 파일로 열 때는 Esri 회색 지도
+// (OpenStreetMap은 파일로 연 페이지의 요청을 막기 때문)
+if (location.protocol.startsWith("http")) {
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors", maxZoom: 19, className: "basetiles"}).addTo(map);
+} else {
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+    attribution: "Tiles &copy; Esri", maxNativeZoom: 13, maxZoom: 19}).addTo(map);
+}
 
 const visible = r => state.g.has(r.g) && (!state.gu || r.gu===state.gu) && (!state.q || r.n.includes(state.q));
 function style(f){
@@ -152,13 +166,13 @@ function style(f){
 }
 const layer = L.geoJSON(D.geo, {style, onEachFeature:(f, l) => {
   const r = byCode[f.properties.c];
-  l.bindTooltip(r ? `<b>${r.n}</b><br>${r.gu} ${r.dong}<br>등급: ${r.g}` : `${D.names[f.properties.c]||""}<br>진단 대상 아님`, {sticky:true});
+  l.bindTooltip(r ? `<b>${r.n}</b><br>${r.gu} ${r.dong}<br>등급: ${r.g} · 전망 점수 ${score(r)}` : `${D.names[f.properties.c]||""}<br>진단 대상 아님`, {sticky:true});
   if(r) l.on("click", () => select(r.c, false));
 }}).addTo(map);
 const layerByCode = {}; layer.eachLayer(l => layerByCode[l.feature.properties.c] = l);
 const dots = L.layerGroup(D.rows.map(r => {
   const m = L.circleMarker([r.lat, r.lng], {radius: r.g==="보통" ? 3 : 4.5, weight: 0.8, color: "#fff", fillColor: C[r.g], fillOpacity: 0.95});
-  m.bindTooltip(`<b>${r.n}</b><br>${r.gu} ${r.dong}<br>등급: ${r.g}`); m.on("click", () => select(r.c)); m._row = r; return m;
+  m.bindTooltip(`<b>${r.n}</b><br>${r.gu} ${r.dong}<br>등급: ${r.g} · 전망 점수 ${score(r)}`); m.on("click", () => select(r.c)); m._row = r; return m;
 }));
 function refreshDots(){
   dots.eachLayer(m => { const on = visible(m._row); m.setStyle({fillOpacity: on ? 0.95 : 0, opacity: on ? 1 : 0}); if(on && m._row.g!=="보통") m.bringToFront(); });
@@ -178,7 +192,7 @@ function select(c, fly=true){
   document.getElementById("detail").innerHTML = `
     <h2>${r.n}</h2>
     <div class="muted">${r.gu} ${r.dong} · ${r.t}</div>
-    <p style="margin:12px 0 4px"><span class="badge" style="background:${C[r.g]};color:${r.g==="보통"?"#3b3b3b":"#fff"}">${r.g}</span> <span class="muted" style="margin-left:6px">전망 점수 <b style="color:var(--ink)">${Math.round(r.p*100)}</b> / 100</span></p>
+    <p style="margin:12px 0 4px"><span class="badge" style="background:${C[r.g]};color:${r.g==="보통"?"#3b3b3b":"#fff"}">${r.g}</span> <span class="muted" style="margin-left:6px">전망 점수 <b style="color:var(--ink)">${score(r)}</b> (862곳 중 ${topTxt(r)})</span></p>
     <p class="muted" style="margin:6px 0">${DESC[r.g]}</p>
     <div class="kv">
       <div><b>${pct(r.q4)}</b><span>2025년 4분기 변화 (전년 같은 분기 대비)</span></div>
@@ -206,7 +220,7 @@ function renderList(){
     `<div class="item" data-c="${r.c}"><span><span class="dot" style="background:${C[r.g]}"></span>${r.n}</span><span class="muted">${r.gu}</span></div>`).join("");
   document.getElementById("tb").innerHTML = rows.map(r =>
     `<tr data-c="${r.c}" ${state.sel===r.c?'style="background:#f1f6f2"':""}><td>${r.n}</td><td>${r.gu}</td><td>${r.t}</td>
-     <td><span class="dot" style="background:${C[r.g]}"></span>${r.g}</td><td class="num">${Math.round(r.p*100)}</td>
+     <td><span class="dot" style="background:${C[r.g]}"></span>${r.g}</td><td class="num">${score(r)}</td>
      <td class="num">${pct(r.q4)}</td><td class="num">${pct(r.yr)}</td><td class="num">${(r.cl*100).toFixed(0)}%</td><td class="num">${r.cafe}</td></tr>`).join("");
 }
 document.getElementById("results").addEventListener("click", e => { const it = e.target.closest(".item"); if(it) select(+it.dataset.c); });
@@ -221,7 +235,7 @@ document.querySelectorAll(".chip").forEach(ch => ch.addEventListener("click", ()
   const g = ch.dataset.g; ch.classList.toggle("on"); state.g.has(g) ? state.g.delete(g) : state.g.add(g); layer.setStyle(style); refreshDots(); renderList();
 }));
 document.querySelectorAll("th").forEach(th => th.addEventListener("click", () => {
-  const k = th.dataset.k; state.sortDir = state.sortK===k ? -state.sortDir : 1; state.sortK = k; renderList();
+  const k = th.dataset.k; state.sortDir = state.sortK===k ? -state.sortDir : (k==="p" ? -1 : 1); state.sortK = k; renderList();
 }));
 renderList();
 </script>
