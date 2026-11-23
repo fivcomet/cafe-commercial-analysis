@@ -100,7 +100,7 @@
 <section class="tbl">
   <table>
     <thead><tr>
-      <th data-k="n">상권</th><th data-k="gu">자치구</th><th data-k="t">유형</th><th data-k="g">등급</th>
+      <th data-k="n">상권</th><th data-k="gu">자치구</th><th data-k="t">유형</th><th data-k="g">등급</th><th data-k="p" title="모델 확률을 0~100으로 바꾼 값. 순서를 비교하는 용도">전망 점수 ⓘ</th>
       <th data-k="q4">2025 4분기 변화</th><th data-k="yr">2025 1년 변화</th><th data-k="cl">폐업률</th><th data-k="cafe">카페 수</th>
     </tr></thead>
     <tbody id="tb"></tbody>
@@ -112,6 +112,7 @@
     <li>등급은 <b>같은 해 다른 상권과 비교한 상대적인 전망</b>입니다. '양호'라도 매출이 줄 수 있습니다.</li>
     <li>상권 전체의 흐름이며, 그 상권에 새로 차릴 가게의 성공이나 수익을 말하지 않습니다. 임대료·위치·운영 정보는 없습니다.</li>
     <li>성능: 2025년 시험 ROC-AUC 0.667, 2026년 상반기 확인 ROC-AUC 0.706. 약하지만 분명한 신호이므로 후보 상권을 거르는 1차 참고용입니다. 가장 큰 신호는 '연말까지 이어진 최근 매출 흐름'입니다.</li>
+    <li>전망 점수(0~100)는 모델 확률을 바꾼 값으로, <b>상권끼리 순서를 비교하는 용도</b>입니다. 양 끝에서는 실제보다 자신 있게 나오는 경향이 있어 '몇 % 확률'로 읽지 않는 것을 권합니다. 40 미만은 위험, 60 이상은 양호입니다.</li>
     <li>카페 5곳 이상이고 매출 추정이 있는 상권만 진단합니다(862곳).</li>
     <li>데이터 출처: 서울열린데이터광장 「서울시 상권분석서비스」(서울특별시). 추정매출은 카드 결제 기반 추정치입니다.</li>
   </ul>
@@ -179,7 +180,7 @@ function select(c, fly=true){
   document.getElementById("detail").innerHTML = `
     <h2>${r.n}</h2>
     <div class="muted">${r.gu} ${r.dong} · ${r.t}</div>
-    <p style="margin:12px 0 4px"><span class="badge" style="background:${C[r.g]}">${r.g}</span></p>
+    <p style="margin:12px 0 4px"><span class="badge" style="background:${C[r.g]};color:${r.g==="보통"?"#3b3b3b":"#fff"}">${r.g}</span> <span class="muted" style="margin-left:6px">전망 점수 <b style="color:var(--ink)">${Math.round(r.p*100)}</b> / 100</span></p>
     <p class="muted" style="margin:6px 0">${DESC[r.g]}</p>
     <div class="kv">
       <div><b>${pct(r.q4)}</b><span>2025년 4분기 변화 (전년 같은 분기 대비)</span></div>
@@ -207,7 +208,7 @@ function renderList(){
     `<div class="item" data-c="${r.c}"><span><span class="dot" style="background:${C[r.g]}"></span>${r.n}</span><span class="muted">${r.gu}</span></div>`).join("");
   document.getElementById("tb").innerHTML = rows.map(r =>
     `<tr data-c="${r.c}" ${state.sel===r.c?'style="background:#f1f6f2"':""}><td>${r.n}</td><td>${r.gu}</td><td>${r.t}</td>
-     <td><span class="dot" style="background:${C[r.g]}"></span>${r.g}</td>
+     <td><span class="dot" style="background:${C[r.g]}"></span>${r.g}</td><td class="num">${Math.round(r.p*100)}</td>
      <td class="num">${pct(r.q4)}</td><td class="num">${pct(r.yr)}</td><td class="num">${(r.cl*100).toFixed(0)}%</td><td class="num">${r.cafe}</td></tr>`).join("");
 }
 document.getElementById("results").addEventListener("click", e => { const it = e.target.closest(".item"); if(it) select(+it.dataset.c); });
